@@ -273,9 +273,16 @@ function App({ apiBase }: PropsApp) {
     [filtros.alcaldias, seleccionarAlcaldia, setFiltro],
   );
 
+  const portalCatalogo = (estado: 'loading' | 'error' | 'empty') => hostHallazgos ? createPortal(
+    <div data-state={estado} role={estado === 'error' ? 'alert' : 'status'} aria-busy={estado === 'loading'}>
+      <p>{estado === 'error' ? 'No se pudieron calcular los hallazgos. El servicio no está disponible.' : estado === 'empty' ? 'No hay datos publicados para calcular hallazgos.' : 'Consultando los datos para calcular hallazgos…'}</p>
+      {estado === 'error' ? <button type="button" onClick={() => { void catalogoQuery.refetch(); }}>Reintentar</button> : null}
+    </div>, hostHallazgos) : null;
+
   if (catalogoQuery.isError) {
     return (
       <div className="at-app">
+        {portalCatalogo(catalogoQuery.isFetching ? 'loading' : 'error')}
         <div className="at-aviso at-aviso--error" role="alert">
           <p className="at-aviso-title">No se pudo cargar el catálogo del Atlas vial</p>
           <p>
@@ -290,9 +297,14 @@ function App({ apiBase }: PropsApp) {
     );
   }
 
+  if (catalogoQuery.data && !catalogoQuery.isFetching && !catalogoQuery.data.filtros.periodo.desde) {
+    return <div className="at-app">{portalCatalogo('empty')}<p role="status">No hay hechos publicados en este catálogo.</p></div>;
+  }
+
   if (!catalogoQuery.data || !periodoPublicado.desde) {
     return (
       <div className="at-app">
+        {portalCatalogo('loading')}
         <div className="at-skeleton at-skeleton--head" />
         <div className="at-skeleton at-skeleton--kpis" />
         <div className="at-grid-mapa">
@@ -349,6 +361,8 @@ function App({ apiBase }: PropsApp) {
               tiempo={tiempo}
               personas={personasQuery.data ?? null}
               cargando={resumenQuery.isFetching || territorioQuery.isFetching}
+              error={resumenQuery.isError || territorioQuery.isError || tiempoQuery.isError}
+              onReintentar={() => { void resumenQuery.refetch(); void territorioQuery.refetch(); void tiempoQuery.refetch(); }}
             />,
             hostHallazgos,
           )

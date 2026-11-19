@@ -25,6 +25,8 @@ export interface PropsHallazgos {
   tiempo: Tiempo | null;
   personas: Personas | null;
   cargando: boolean;
+  error?: boolean;
+  onReintentar?: () => void;
 }
 
 /** Fallecidas por cada 100 hechos de la categoría (tasa descriptiva interna). */
@@ -154,12 +156,15 @@ export function calcularHallazgos({
   return hallazgos.slice(0, 4);
 }
 
-export function Hallazgos({ resumen, alcaldias, tiempo, personas, cargando }: PropsHallazgos) {
+export function Hallazgos({ resumen, alcaldias, tiempo, personas, cargando, error = false, onReintentar }: PropsHallazgos) {
+  if (cargando) return <p data-state="loading" role="status" aria-busy="true">Calculando hallazgos con los filtros activos…</p>;
+  if (error) return <div data-state="error" role="alert"><p>No se pudieron calcular los hallazgos del Atlas vial. El servicio no está disponible.</p>
+    <button type="button" className="at-btn" onClick={onReintentar}>Reintentar</button></div>;
   const hallazgos = calcularHallazgos({ resumen, alcaldias, tiempo, personas });
 
   if (hallazgos.length === 0) {
     return (
-      <p className="at-hallazgos-vacio">
+      <p className="at-hallazgos-vacio" data-state="empty" role="status">
         {cargando
           ? 'Calculando hallazgos con los filtros activos…'
           : 'Con los filtros actuales no hay hechos suficientes para describir un hallazgo.'}
@@ -168,7 +173,7 @@ export function Hallazgos({ resumen, alcaldias, tiempo, personas, cargando }: Pr
   }
 
   return (
-    <ul className="at-hallazgos" data-testid="hallazgos">
+    <ul className="at-hallazgos" data-testid="hallazgos" data-state="ready">
       {hallazgos.map((hallazgo) => (
         <li key={hallazgo.clave}>
           <p className="at-hallazgo-titulo">
